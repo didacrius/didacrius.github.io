@@ -18,6 +18,7 @@ En esta entrada veremos cómo tener Grafana pre-configurado con Tempo, Prometheu
 ## Grafana
 ### ¿Qué es Grafana?
 Grafana es uno de los mejores y más completos servicios de monitoring de código abierto, Open Source, donde podemos tener una UI amigable a la vez que poder explotar los datos de las diferentes verticales de la observabilidad, trazas, métricas y logs, desde un mismo punto centralizado y poder correlacionar dichas verticales entre ellas para tener una buena base para la observabilidad de nuestro sistema.
+
 ### ¿Cómo añadir Grafana en Docker?
 - Añadir Grafana en el fichero de docker-compose.
 ```yaml
@@ -41,6 +42,7 @@ Grafana Tempo es un servicio, altamente escalable y de código abierto, de inges
 
 ### ¿Cómo añadir Grafana Tempo en Docker?
 - Añadir Grafana Tempo en el fichero de docker-compose.
+
 ```yaml
 tempo:
     image: grafana/tempo:1.4.1
@@ -56,6 +58,7 @@ tempo:
 ```
 
 - Archivo de configuración <em>config/tempo.yml</em> de Grafana Tempo.
+
 ```yaml
 server:
   http_listen_port: 3200
@@ -100,13 +103,12 @@ storage:
 ```
 
 ## Prometheus
-Prometheus es un servicio de ingesta de métricas.
 ### ¿Qué es Prometheus?
-Prometheus es un agregador de métricas. Prometheus tiene la peculariadad respecto a los demás servicios, Tempo y  Loki, que usa un sistema pull para la ingesta de métricas es decir que en vez de que los servicios envíen, sistema push, las métricas a Prometheus es Prometheus quien pregunta por las métricas, scrapping, cada cierto tiempo periódicamente.
-
+Prometheus es un servicio de ingesta y agregación de métricas. Prometheus tiene la peculariadad respecto a los demás servicios, Tempo y  Loki, que usa un sistema pull para la ingesta de métricas es decir que en vez de que los servicios envíen, sistema push, las métricas a Prometheus es Prometheus quien pregunta por las métricas, scrapping, cada cierto tiempo periódicamente.
 
 ### ¿Cómo añadir Prometheus en Docker?
 - Añadir Prometheus en el fichero de docker-compose.
+
 ```yaml
 prometheus:
     image: prom/prometheus:v2.37.0
@@ -119,6 +121,7 @@ prometheus:
 ```
 
 - Archivo de configuración <em>config/prometheus.yaml</em> de Prometheus.
+
 ```yaml
 scrape_configs:
   - job_name: 'scrape_servicename'
@@ -134,6 +137,7 @@ Grafana Loki es un servicio de ingesta de logs. Entre sus características desta
 
 ### ¿Cómo añadir Grafana Loki en Docker?
 - Añadir Grafana Loki en el fichero de docker-compose.
+
 ```yaml
 loki:
     endpoint: http://loki:3100/loki/api/v1/push
@@ -148,6 +152,7 @@ loki:
 ```
 
 - Archivo de configuración <em>config/loki.yml</em> de Grafana Loki.
+
 ```yaml
 auth_enabled: false
 
@@ -178,18 +183,21 @@ schema_config:
 
 ## Conectar Grafana con datasources
 Para conectar Grafana con los diferentes datasources de Tempo, Prometheus y Loki, deberemos primeramente añadir los siguientes volúmenes al servicio de Grafana de nuestro docker-compose.
+
 ```yaml
 - ./configs/grafana/grafana.ini:/etc/grafana/grafana.ini
 - ./configs/grafana/provisioning/datasources:/etc/grafana/provisioning/datasources
 ```
 
 El primero de ellos, grafana.ini, lo usaremos para activar una <em>feature</em> de Grafana relacionada con Tempo.
+
 ```yaml
 [feature_toggles]
 enable = tempoSearch tempoBackendSearch
 ```
 
 El segundo de ellos, datasources, se trata de un directorio que contendrá un fichero llamado datasources.yml en la que configuraremos las conexiones de Grafana con Tempo, Prometheus y Loki para poder consultar y explotar su información (iremos introduciendo los datasources en los siguientes pasos).
+
 ```yaml
 apiVersion: 1
 
@@ -198,6 +206,7 @@ datasources:
 
 ### ¿Cómo conectar Grafana con Tempo?
 En nuestro archivo de datasources.yml añadiremos el datasource de Tempo.
+
 ```yaml
 apiVersion: 1
 
@@ -212,8 +221,10 @@ datasources:
   version: 1
   editable: false
 ```
+
 ### ¿Cómo conectar Grafana con Prometheus?
 En nuestro archivo de datasources.yml añadiremos el datasource de Prometheus.
+
 ```yaml
 apiVersion: 1
 
@@ -230,8 +241,10 @@ datasources:
   version: 1
   editable: false
 ```
+
 ### ¿Cómo conectar Grafana con Loki?
 En nuestro archivo de datasources.yml añadiremos el datasource de Loki.
+
 ```yaml
 apiVersion: 1
 
@@ -248,9 +261,64 @@ datasources:
 ```
 
 #### ¿Cómo correlacionar Grafana Loki (logs) con Tempo (trazas)?
-- Para poder movernos de un log de Loki a la traza de Tempo correspondiente a golpe de 'clic' tendremos que añadir campos derivados al datasource de Loki recientemente añadido:
+- Para poder movernos de un log de Loki a la traza de Tempo correspondiente a golpe de 'clic' tendremos que añadir campos derivados al datasource de Loki recientemente añadido. 
+
 ```yaml
 jsonData:
+  derivedFields:
+    - datasourceUid: tempo
+      matcherRegex: "\u0022traceid\u0022:\u0022(\\w+)\u0022"
+      name: TraceId
+      url: '$${__value.raw}'
+```
+
+La propiedad <em>datasourceUid</em> hace referencia al datasource con ese valor en su propiedad <em>uid</em>.
+
+Con la propiedad <em>matcherRegex</em> específicamos en qué parte del log queremos extraer el id de la traza.
+
+En la propiedad <em>name</em> concretamos el nombre a darle a esa extración del id de la traza a través de la anterior propiedad mencionada <em>matcherRegex</em>.
+
+Y por último con la <em>url</em> establecemos la url donde hacer la consulta, en este caso será el valor del id de la traza en tempo.
+
+Más información en https://grafana.com/docs/grafana/latest/datasources/loki.
+
+### Integrar Tempo, Prmetheus y Loki con Grafana
+El resultado de nuestro archivo de configuración <em>datasources.yml</em> quedará como en el ejemplo de a continuación en el caso de que hayamos configurado los diferentes datasources de Grafana y correlacionado los logs con las trazas.
+
+```yaml
+apiVersion: 1
+
+datasources:
+- name: Tempo
+  type: tempo
+  uid: tempo
+  access: proxy
+  url: http://tempo:3200
+  basicAuth: false
+  isDefault: false
+  version: 1
+  editable: false
+- name: Prometheus
+  type: prometheus
+  uid: prometheus
+  access: proxy
+  url: http://prometheus:9090
+  jsonData:
+    timeInterval: 10s
+  basicAuth: false
+  isDefault: true
+  version: 1
+  editable: false
+- name: Loki
+  type: loki
+  uid: loki
+  access: proxy
+  url: http://loki:3100
+  basicAuth: false
+  isDefault: false
+  version: 1
+  editable: false
+  jsonData:
     derivedFields:
       - datasourceUid: tempo
         matcherRegex: "\u0022traceid\u0022:\u0022(\\w+)\u0022"
