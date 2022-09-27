@@ -11,7 +11,6 @@ featured: false
 hidden: false
 beforetoc: "En esta entrada veremos cómo conectar Grafana a los diferentes datasources de Tempo, Prometheus y Loki y cómo correlacionarlos entre ellos."
 toc: true
-audio: "/assets/audio/post1.mp3"
 ---
 
 En esta entrada veremos cómo tener Grafana pre-configurado con Tempo, Prometheus y Loki en Docker. También veremos de manera muy breve qué nos solución nos ofrecen los diferentes servicios, anteriormente citados, de los que Grafana sacará esa información.
