@@ -17,13 +17,14 @@ En esta entrada veremos cómo tener Grafana pre-configurado con Tempo, Prometheu
 
 ## Grafana
 ### ¿Qué es Grafana?
-Grafana es uno de los mejores y más completos servicios de monitoring de código abierto, Open Source, donde podemos tener una UI amigable a la vez que poder explotar los datos de las diferentes verticales de la observabilidad, trazas, métricas y logs, desde un mismo punto centralizado y poder correlacionar dichas verticales entre ellas para tener una buena base para la observabilidad de nuestro sistema.
+<strong>Grafana es uno de los mejores y más completos servicios de monitoring de código abierto</strong>, Open Source, donde podemos tener una UI amigable a la vez que poder explotar los <strong>datos de las diferentes verticales de la observabilidad, trazas, métricas y logs, desde un mismo punto centralizado</strong> y poder correlacionar dichas verticales entre ellas para tener una buena base para la observabilidad de nuestro sistema.
 
 ### ¿Cómo añadir Grafana en Docker?
 - Añadir Grafana en el fichero de docker-compose.
+
 ```yaml
 grafana:
-    image: grafana/grafana:${GRAFANA_VERSION}
+    image: grafana/grafana:9.0.1
     container_name: grafana
     environment:
       - GF_AUTH_ANONYMOUS_ENABLED=true
@@ -38,7 +39,7 @@ grafana:
 
 ## Tempo
 ### ¿Qué es Grafana Tempo?
-Grafana Tempo es un servicio, altamente escalable y de código abierto, de ingesta de trazas distribuidas. Puede ingerir métricas de gran variedad de protocolos, sobre todo los de código abierto como OpenTelemetry. Tiene una gran integración con Grafana, Prometheus y Loki.
+<strong>Grafana Tempo es un servicio, altamente escalable y de código abierto, de ingesta de trazas distribuidas</strong>. Puede ingerir métricas de gran variedad de protocolos, sobre todo los de código abierto como OpenTelemetry. Tiene una gran integración con Grafana, Prometheus y Loki.
 
 ### ¿Cómo añadir Grafana Tempo en Docker?
 - Añadir Grafana Tempo en el fichero de docker-compose.
@@ -54,8 +55,10 @@ tempo:
     restart: unless-stopped
     ports:
       - 3200:3200  # tempo
-      - 4007:4317  # otlp grpc
+      - 4007:4317  # grpc
 ```
+
+En este ejemplo se abre el puerto de tempo para exponer las trazas recibidas y el puerto grpc / http2 para la ingesta de trazas. Este último puerto será donde los diferentes servicios enviarán su telemetría relativa a trazas.
 
 - Archivo de configuración <em>config/tempo.yml</em> de Grafana Tempo.
 
@@ -104,7 +107,7 @@ storage:
 
 ## Prometheus
 ### ¿Qué es Prometheus?
-Prometheus es un servicio de ingesta y agregación de métricas. Prometheus tiene la peculariadad respecto a los demás servicios, Tempo y  Loki, que usa un sistema pull para la ingesta de métricas es decir que en vez de que los servicios envíen, sistema push, las métricas a Prometheus es Prometheus quien pregunta por las métricas, scrapping, cada cierto tiempo periódicamente.
+<strong>Prometheus es un servicio de ingesta y agregación de métricas</strong>. Prometheus tiene la peculariadad respecto a los demás servicios, Tempo y  Loki, que <strong>usa un sistema pull para la ingesta de métricas</strong> es decir que en vez de que los servicios envíen las métricas a Prometheus,sistema push, es Prometheus quien pregunta por las métricas, scrapping, cada cierto tiempo periódicamente.
 
 ### ¿Cómo añadir Prometheus en Docker?
 - Añadir Prometheus en el fichero de docker-compose.
@@ -120,6 +123,8 @@ prometheus:
       - "9091:9090"
 ```
 
+En este ejemplo se abre el puerto de Prometheus para exponer las métricas recibidas. En este caso no expone puerto para recibir métricas porque Prometheus realiza la ingesta de telemetría mediante <em>scraping</em>, el sistema <em>pull</em> que hemos comentado anteriormente, donde es el servicio de telemetría, en este caso Prometheus, quien extrae los datos generados por otros servicios. 
+
 - Archivo de configuración <em>config/prometheus.yaml</em> de Prometheus.
 
 ```yaml
@@ -131,9 +136,11 @@ scrape_configs:
       - targets: ['<DOCKER-SERVICE-NAME>:8888']
 ```
 
+En este ejemplo Prometheus extrae las métricas, <em>scraping</em>, que expone el servicio especificado en los puertos especificados.
+
 ## Loki
 ### ¿Qué es Grafana Loki?
-Grafana Loki es un servicio de ingesta de logs. Entre sus características destacan que se trata de un servicio escalable horizontalmente y, por lo tanto, de alta disponibilidad. Tiene una gran integración con Grafana, Tempo y Prometheus.
+<strong>Grafana Loki es un servicio de ingesta de logs</strong>. Entre sus características destacan que se trata de un servicio escalable horizontalmente y, por lo tanto, de alta disponibilidad. Tiene una gran integración con Grafana, Tempo y Prometheus.
 
 ### ¿Cómo añadir Grafana Loki en Docker?
 - Añadir Grafana Loki en el fichero de docker-compose.
@@ -150,6 +157,8 @@ loki:
       record:
         traceID: "traceid"
 ```
+
+En este ejemplo se indica la dirección de Loki para la ingesta de trazas. Este último puerto será donde los diferentes servicios enviarán su telemetría relativa a logs.
 
 - Archivo de configuración <em>config/loki.yml</em> de Grafana Loki.
 
@@ -280,7 +289,7 @@ En la propiedad <em>name</em> concretamos el nombre a darle a esa extración del
 
 Y por último con la <em>url</em> establecemos la url donde hacer la consulta, en este caso será el valor del id de la traza en tempo.
 
-Más información en https://grafana.com/docs/grafana/latest/datasources/loki.
+Más información en la <a href="https://grafana.com/docs/grafana/latest/datasources/loki" target="_blank">documentación oficial de Grafana sobre datasources de Grafana Loki</a>.
 
 ### Integrar Tempo, Prmetheus y Loki con Grafana
 El resultado de nuestro archivo de configuración <em>datasources.yml</em> quedará como en el ejemplo de a continuación en el caso de que hayamos configurado los diferentes datasources de Grafana y correlacionado los logs con las trazas.
@@ -325,3 +334,5 @@ datasources:
         name: TraceId
         url: '$${__value.raw}'
 ```
+
+<em>Et voilà</em>! Ya tendríamos listo nuestra stack de monitorización y observabilidad Open Source con Grafana, Tempo, Prometheus y Loki. Sólo quedaría desde nuestros servicios empezar a enviar telemetría en caso de las trazas y los logs y a exponer telemetría en caso de las métricas
