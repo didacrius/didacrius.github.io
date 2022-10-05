@@ -4,7 +4,7 @@ title:  "¿Cómo implementar Open Telemetry en C# .NET?"
 author: didac
 categories: [ .NET, Observabilidad ]
 tags: [ OpenTelemetry ]
-image: assets/images/post-headers/introduccion-opentelemetry.png
+image: assets/images/post-headers/introduccion-opentelemetry-dotnet.png
 excerpt: "Cómo instrumentar nuestros servicios desarrollados en C# .NET con Open Telemetry."
 description: "Cómo instrumentar nuestros servicios desarrollados en C# .NET con Open Telemetry."
 featured: true
